@@ -1,0 +1,14 @@
+version: '3'
+services:
+    collector:
+        build: collector
+        networks:
+            - appnet
+        volumes:
+            - ./collector:/go/src/github.com/dak0rn/docker-swarm-example/collector
+            - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+    appnet:
+
+# vim: et:sw=4:tw=4
