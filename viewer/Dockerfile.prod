@@ -1,0 +1,10 @@
+FROM golang:1.11-alpine3.8 AS build-env
+ADD . /go/src/github.com/dak0rn/docker-swarm-example/viewer
+WORKDIR /go/src/github.com/dak0rn/docker-swarm-example/viewer
+
+RUN apk add --update make musl-dev gcc
+RUN make build
+
+FROM scratch
+COPY --from=build-env /go/src/github.com/dak0rn/docker-swarm-example/viewer/viewer /viewer
+CMD ["/viewer"]
