@@ -4,6 +4,8 @@ services:
         build: collector
         networks:
             - appnet
+        environment:
+            VIEWER_ADDR: "http://viewer:3000/collect"
         volumes:
             - ./collector:/go/src/github.com/dak0rn/docker-swarm-example/collector
             - /var/run/docker.sock:/var/run/docker.sock
@@ -12,6 +14,17 @@ services:
         image: redis
         networks:
             - appnet
+
+    viewer:
+        build: viewer
+        ports:
+            - 4000:3000
+        networks:
+            - appnet
+        environment:
+            REDIS_ADDR: "redis:6379"
+        volumes:
+            - ./viewer:/go/src/github.com/dak0rn/docker-swarm-example/viewer
 
 networks:
     appnet:
