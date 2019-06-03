@@ -14,7 +14,7 @@ type DockerSwarmInfo struct {
 type DockerHostInfo struct {
 	ID                string
 	Containers        int
-	ContainerRunning  int
+	ContainersRunning int
 	ContainersPaused  int
 	ContainersStopped int
 	Images            int
