@@ -52,21 +52,31 @@ func serveHTML(ctx *routing.Context) error {
 
 func serveCollectedInfo(ctx *routing.Context) error {
 	redis := ctx.Get("redis").(*redis.Client)
+	// TODO This should be in a transaction
 
+	log.Info("Fetching stored host information from the database...")
 	keys, err := redis.SMembers(REDIS_LIST_KEY).Result()
 	if nil != err {
 		return handleError(err, "Failed to fetch the data list", ctx)
 	}
 
-	var stored []string
+	var stored []DockerHostInfo
 
 	for _, key := range keys {
+		log.WithField("host", key).Info("Fetching host information")
 		datakey, err := redis.Get(REDIS_HOST_PREFIX + key).Result()
+
 		if nil != err {
 			return handleError(err, fmt.Sprintf("Failed to fetch key: %s", key), ctx)
 		}
 
-		stored = append(stored, datakey)
+		info := DockerHostInfo{}
+		err = json.Unmarshal([]byte(datakey), &info)
+		if nil != err {
+			return handleError(err, "Failed to unmarshal JSON", ctx)
+		}
+
+		stored = append(stored, info)
 	}
 
 	response, err := json.Marshal(stored)
@@ -78,6 +88,36 @@ func serveCollectedInfo(ctx *routing.Context) error {
 
 	ctx.Write(response)
 
+	return nil
+}
+
+func collectInfo(ctx *routing.Context) error {
+	log.Info("Retrieved data to store...")
+	body := ctx.Request.Body()
+	data := DockerHostInfo{}
+	redis := ctx.Get("redis").(*redis.Client)
+
+	err := json.Unmarshal(body, &data)
+	if nil != err {
+		return handleError(err, "Failed to parse the request body", ctx)
+	}
+
+	// TODO This should be in a transaction
+
+	// Store the server data first
+	err = redis.Set(REDIS_HOST_PREFIX+data.ID, data, 0).Err()
+	if nil != err {
+		return handleError(err, "Failed to write the host data", ctx)
+	}
+
+	// Add the new entry to the set of hosts
+	err = redis.SAdd(REDIS_LIST_KEY, data.ID).Err()
+	if nil != err {
+		return handleError(err, "Failed to write the host to the host list", ctx)
+	}
+
+	ctx.SetContentType("application/json")
+	ctx.Write([]byte(`{"stored": true}`))
 	return nil
 }
 
@@ -100,6 +140,7 @@ func main() {
 	router.Use(withRedis(redisClient))
 	router.Get("/", serveHTML)
 	router.Get("/collected", serveCollectedInfo)
+	router.Post("/collect", collectInfo)
 
 	log.Info("Starting the web server...")
 	fasthttp.ListenAndServe(":3000", router.HandleRequest)
