@@ -22,7 +22,7 @@ var htmlPage []byte = []byte(`
 	(function() {
 		function renderItem(item) {
 			const el = document.createElement('pre');
-			el.innerText = item;
+			el.innerText = JSON.stringify(item, null, 2);
 
 			return el;
 		}
@@ -30,6 +30,8 @@ var htmlPage []byte = []byte(`
 		async function update() {
 			const main = document.querySelector('main');
 			const status = document.querySelector('#status');
+			
+			main.innerHTML = '';
 
 			try {
 				status.innerText = 'Loading...';
@@ -56,6 +58,7 @@ var htmlPage []byte = []byte(`
 		function main() {
 			// Set interval
 			update();
+			setInterval(update, 3000);
 		}
 
 		document.addEventListener("DOMContentLoaded", main);
